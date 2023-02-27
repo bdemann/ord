@@ -37,6 +37,7 @@ use {
 };
 
 mod error;
+mod json;
 
 enum BlockQuery {
   Height(u64),
@@ -145,7 +146,7 @@ impl Server {
       let router = Router::new()
         .route("/", get(Self::home))
         .route("/block-count", get(Self::block_count))
-        .route("/helloworld", get(Self::hello_world))
+        .route("/hello-world", get(Self::hello_world))
         .route("/block/:query", get(Self::block))
         .route("/bounties", get(Self::bounties))
         .route("/clock", get(Self::clock))
@@ -155,6 +156,7 @@ impl Server {
         .route("/feed.xml", get(Self::feed))
         .route("/input/:block/:transaction/:input", get(Self::input))
         .route("/inscription/:inscription_id", get(Self::inscription))
+        .route("/inscription-json/:inscription_id", get(Self::inscription_json))
         .route("/inscriptions", get(Self::inscriptions))
         .route("/inscriptions/:from", get(Self::inscriptions_from))
         .route("/install.sh", get(Self::install_script))
@@ -677,10 +679,6 @@ impl Server {
 
   async fn block_count(Extension(index): Extension<Arc<Index>>) -> ServerResult<String> {
     Ok(index.block_count()?.to_string())
-  }
-
-  async fn hello_world() -> ServerResult<String> {
-    Ok("Hello World".to_string())
   }
 
   async fn input(
