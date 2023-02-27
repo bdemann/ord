@@ -165,7 +165,7 @@ impl Server {
         .route("/feed.xml", get(Self::feed))
         .route("/input/:block/:transaction/:input", get(Self::input))
         .route("/inscription/:inscription_id", get(Self::inscription))
-        .route("/inscription-json/:inscription_id", get(Self::inscription_json))
+        .route("/inscription-json/:start/:end", get(Self::inscription_json))
         .route("/inscriptions", get(Self::inscriptions))
         .route("/inscriptions/:from", get(Self::inscriptions_from))
         .route("/install.sh", get(Self::install_script))

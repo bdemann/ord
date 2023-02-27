@@ -1,12 +1,12 @@
-use std::sync::Arc;
+use std::{sync::Arc};
 use axum::{Extension, extract::Path};
-use bitcoin::TxOut;
+use bitcoin::{TxOut};
 use serde::{Deserialize, Serialize};
 
-use crate::{Index, Sat, Inscription, SatPoint, Chain, InscriptionId, templates::PageConfig};
-use super::{server::Server, error::{ServerResult, OptionExt}};
+use crate::{Index, Sat, SatPoint, Chain, InscriptionId, templates::PageConfig, deserialize_from_str::DeserializeFromStr};
+use super::{server::Server, error::{ServerResult, OptionExt, ServerError}};
 
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 struct InscriptionJson {
   pub(crate) inscription_id: InscriptionId,
   address: String,
@@ -25,7 +25,7 @@ struct InscriptionJson {
   end: bool,
   pub(crate) chain: Chain,
   body: Option<Vec<u8>>,
-  content_type: Option<Vec<u8>>,
+  content_type: Option<String>,
   pub(crate) next: Option<InscriptionId>,
   pub(crate) number: u64,
   pub(crate) previous: Option<InscriptionId>,
@@ -42,8 +42,26 @@ impl Server {
   pub(super) async fn inscription_json(
     Extension(page_config): Extension<Arc<PageConfig>>,
     Extension(index): Extension<Arc<Index>>,
-    Path(inscription_id): Path<InscriptionId>,
+    Path((DeserializeFromStr(start), DeserializeFromStr(end))): Path<(
+      DeserializeFromStr<u64>,
+      DeserializeFromStr<u64>,
+    )>,
   ) -> ServerResult<String> {
+    if start == end {
+      return Err(ServerError::BadRequest("empty range".to_string()));
+    }
+    if start > end {
+
+      return Err(ServerError::BadRequest(
+        "range start greater than range end".to_string(),
+      ))
+    }
+    let inscription_ids: Vec<_> = (start..=end).map(|n| index.get_inscription_id_by_inscription_number(n).unwrap().unwrap()).collect();
+
+    let inscription_json: Vec<InscriptionJson> = inscription_ids.iter().fold(Ok(vec![]), |acc: ServerResult<_>, inscription_id| {
+    let inscription_id = inscription_id.clone();
+    let acc = acc?;
+
     let entry = index
       .get_inscription_entry(inscription_id)?
       .ok_or_not_found(|| format!("inscription {inscription_id}"))?;
@@ -80,7 +98,7 @@ impl Server {
         chain: page_config.chain,
         genesis_fee: entry.fee,
         genesis_height: entry.height,
-        inscription_id,
+        inscription_id: inscription_id.clone(),
         next,
         number: entry.number,
         output,
@@ -97,16 +115,17 @@ impl Server {
         location: "todo".to_string(),
         offset: 0,
         end: true,
-        body: inscription.body().map(|bytes| bytes.to_vec()),
-        content_type: inscription.content_type().map(|bytes| bytes.as_bytes().to_vec()),
+        // body: inscription.body().map(|bytes| bytes.to_vec()), // BODY is so large it's hard to see what's going on so we are commenting out for readability in tests.
+        body: Some(vec![]),
+        content_type: inscription.content_type().map(|bytes| bytes.to_string()),
       };
 
-      let thing = serde_json::to_string(&thing);
+      Ok(vec![acc, vec![thing]].concat())
+      // Ok(format!("{}{}", acc, serde_json::to_string(&thing).unwrap()))
 
-      match thing {
-        Ok(json) => Ok(json),
-        Err(err) => Err(super::error::ServerError::BadRequest(err.to_string())),
-    }
+    })?;
+
+    Ok(serde_json::to_string(&inscription_json).unwrap())
   }
 
 }
