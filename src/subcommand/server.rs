@@ -148,6 +148,8 @@ impl Server {
 
       let router = Router::new()
         .route("/", get(Self::home))
+        .route("/block-count", get(Self::block_count))
+        .route("/helloworld", get(Self::hello_world))
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))
         .route("/blockheight", get(Self::block_height))
@@ -725,6 +727,9 @@ impl Server {
         .unix_timestamp()
         .to_string(),
     )
+  }
+  async fn hello_world() -> ServerResult<String> {
+    Ok("Hello World".to_string())
   }
 
   async fn input(
