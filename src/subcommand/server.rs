@@ -145,6 +145,7 @@ impl Server {
       let router = Router::new()
         .route("/", get(Self::home))
         .route("/block-count", get(Self::block_count))
+        .route("/helloworld", get(Self::hello_world))
         .route("/block/:query", get(Self::block))
         .route("/bounties", get(Self::bounties))
         .route("/clock", get(Self::clock))
@@ -676,6 +677,10 @@ impl Server {
 
   async fn block_count(Extension(index): Extension<Arc<Index>>) -> ServerResult<String> {
     Ok(index.block_count()?.to_string())
+  }
+
+  async fn hello_world() -> ServerResult<String> {
+    Ok("Hello World".to_string())
   }
 
   async fn input(
