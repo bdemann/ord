@@ -7,6 +7,7 @@ pub mod epochs;
 pub mod find;
 pub mod index;
 pub mod list;
+pub mod mempool_index;
 pub mod parse;
 pub mod runes;
 pub mod server;

@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct DecimalSat {
   pub height: Height,
   pub offset: u64,

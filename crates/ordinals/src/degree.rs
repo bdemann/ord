@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Serialize, Deserialize, Clone)]
 pub struct Degree {
   pub hour: u32,
   pub minute: u32,

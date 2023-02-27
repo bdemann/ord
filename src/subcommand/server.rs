@@ -1,3 +1,5 @@
+use super::mempool_index::MempoolIndex;
+
 use {
   self::{
     accept_encoding::AcceptEncoding,
@@ -44,6 +46,7 @@ pub use server_config::ServerConfig;
 mod accept_encoding;
 mod accept_json;
 mod error;
+mod json;
 pub mod query;
 mod server_config;
 
@@ -177,8 +180,48 @@ impl Server {
         proxy: self.proxy.clone(),
       });
 
+      let client = settings.bitcoin_rpc_client(None)?;
+      let mempool_index = Arc::new(Mutex::new(MempoolIndex::new(client)));
+
+      let mempool_index_clone = Arc::clone(&mempool_index);
+      std::thread::spawn(move || loop {
+        if SHUTTING_DOWN.load(atomic::Ordering::Relaxed) {
+          break;
+        }
+        {
+          let mut mempool_index_clone = mempool_index_clone.lock().unwrap();
+          if let Err(error) = mempool_index_clone.update() {
+            log::warn!("Updating mempool index: {error}");
+          }
+        }
+        thread::sleep(Duration::from_millis(5000));
+      });
+
       let router = Router::new()
         .route("/", get(Self::home))
+        // JSON endpoints
+        .route("/block-count", get(Self::block_count))
+        .route("/inscription-by-id-json/:inscription_id", get(Self::inscription_json_by_id))
+        .route("/inscription-by-index-json/:index", get(Self::inscription_json_by_index))
+        .route("/inscription-json/:start/:end", get(Self::inscription_json))
+        .route("/inscriptions-for-block/:block_index", get(Self::inscriptions_for_block))
+        .route("/inscriptions-for-block-by-hash/:block_hash", get(Self::inscriptions_for_block_by_hash))
+        .route("/paginated-inscriptions-for-block/:block_index/:start/:count", get(Self::paginated_inscriptions_for_block))
+        .route("/paginated-inscriptions-for-block-by-hash/:block_hash/:start/:count", get(Self::paginated_inscriptions_for_block_by_hash))
+        .route("/inscription-count-for-block/:block_index", get(Self::inscription_count_for_block))
+        .route("/inscription-count-for-block-by-hash/:block_hash", get(Self::inscription_count_for_block_by_hash))
+        .route("/latest-block-id", get(Self::latest_block_id))
+        .route("/latest-block-json", get(Self::latest_block))
+        // .route("/latest-inscription-json", get(Self::latest_inscription_json)) // TODO the underlying function on the indexer is gone, so we are removing this endpoint for right now
+        .route("/outputs-for-block/:block_index", get(Self::outputs_for_block))
+        .route("/outputs-for-block-by-hash/:block_hash", get(Self::outputs_for_block_by_hash))
+        .route("/test", get(Self::test))
+        // MEMPOOL endpoints
+        .route("/inscriptions_in_mempool", get(Self::inscriptions_in_mempool))
+        .route("/content_in_mempool/:inscription_id", get(Self::content_in_mempool))
+//        .route("/inscription_count_in_mempool", get(Self::inscription_count_in_mempool))
+//        .route("/paginated_inscriptions_in_mempool", get(Self::paginated_inscriptions_in_mempool))
+        // WEB endpoints
         .route("/address/:address", get(Self::address))
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))
@@ -290,6 +333,7 @@ impl Server {
         .layer(Extension(index))
         .layer(Extension(server_config.clone()))
         .layer(Extension(settings.clone()))
+        .layer(Extension(mempool_index))
         .layer(SetResponseHeaderLayer::if_not_present(
           header::CONTENT_SECURITY_POLICY,
           HeaderValue::from_static("default-src 'self'"),
@@ -1644,6 +1688,30 @@ impl Server {
           .into_response(),
       )
     })
+  }
+
+  async fn content_in_mempool(
+    Extension(mempool_index): Extension<Arc<Mutex<MempoolIndex>>>,
+    Extension(settings): Extension<Arc<Settings>>,
+    Extension(server_config): Extension<Arc<ServerConfig>>,
+    Path(inscription_id): Path<InscriptionId>,
+    accept_encoding: AcceptEncoding,
+  ) -> ServerResult<Response> {
+    if settings.is_hidden(inscription_id) {
+      return Ok(PreviewUnknownHtml.into_response());
+    }
+
+    let mempool_index_lock = mempool_index.lock().unwrap();
+    let inscription = mempool_index_lock
+      .inscriptions
+      .get(&inscription_id)
+      .ok_or_not_found(|| format!("inscription {inscription_id}"))?;
+
+    Ok(
+      Self::content_response(inscription.clone(), accept_encoding, &server_config)?
+        .ok_or_not_found(|| format!("inscription {inscription_id} content"))?
+        .into_response(),
+    )
   }
 
   fn content_response(
