@@ -806,6 +806,33 @@ impl Index {
     )
   }
 
+  pub(crate) fn get_latest_inscriptions(
+    &self,
+    n: usize,
+    from: Option<u64>,
+  ) -> Result<Vec<InscriptionId>> {
+    let rtx = self.database.begin_read()?;
+
+    let inscription_number_to_inscription_id =
+      rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
+
+    let latest = match inscription_number_to_inscription_id.iter()?.rev().next() {
+      Some((number, _id)) => number.value(),
+      None => return Ok(Default::default()),
+    };
+
+    let from = from.unwrap_or(latest);
+
+    let inscriptions = inscription_number_to_inscription_id
+      .range(..=from)?
+      .rev()
+      .take(n)
+      .map(|(_number, id)| Entry::load(*id.value()))
+      .collect();
+
+    Ok(inscriptions)
+  }
+
   pub(crate) fn get_latest_inscriptions_with_prev_and_next(
     &self,
     n: usize,
