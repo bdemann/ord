@@ -1,7 +1,8 @@
 use axum::{extract::Path, Extension};
-use bitcoin::{BlockHash, OutPoint, Script, Transaction, TxOut, Txid, Address};
+use bitcoin::{Address, BlockHash, OutPoint, Script, Transaction, TxOut, Txid};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use serde_json::Error;
+use std::{str::FromStr, sync::Arc};
 
 use super::{
   error::{OptionExt, ServerError, ServerResult},
@@ -14,27 +15,25 @@ use crate::{
 
 #[derive(Deserialize, Serialize, Clone)]
 struct InscriptionJson {
-  pub(crate) inscription_id: InscriptionId,
-  address: String,
+  inscription_id: InscriptionId,
+  address: Address,
   output_value: u64,
-  pub(crate) sat: Option<Sat>,
-  preview: String,
-  content: String,
-  content_len: usize,
-  pub(crate) genesis_height: u64,
-  pub(crate) genesis_fee: u64,
-  pub(crate) timestamp: u32,
+  sat: Option<Sat>,
+  content_len: Option<usize>,
+  genesis_height: u64,
+  genesis_fee: u64,
+  timestamp: u32,
   transaction: String,
   location: String,
-  pub(crate) output: TxOut,
+  output: TxOut,
   offset: u64,
-  pub(crate) chain: Chain,
+  chain: Chain,
   body: Option<Vec<u8>>,
   content_type: Option<String>,
-  pub(crate) next: Option<InscriptionId>,
-  pub(crate) number: u64,
-  pub(crate) previous: Option<InscriptionId>,
-  pub(crate) satpoint: SatPoint,
+  next: Option<InscriptionId>,
+  number: u64,
+  previous: Option<InscriptionId>,
+  satpoint: SatPoint,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -53,32 +52,24 @@ struct OutputJson {
 }
 
 impl Server {
-  pub(super) async fn hello_world(Extension(index): Extension<Arc<Index>>) -> ServerResult<String> {
-    let block_str: Vec<_> = index
-      .blocks(100)
-      .unwrap()
-      .iter()
-      .map(|(_, block_hash)| block_hash.to_string())
-      .collect();
-    Ok(format!("{:?}", block_str))
-  }
-
   pub(super) async fn latest_block(
     Extension(index): Extension<Arc<Index>>,
   ) -> ServerResult<String> {
     let block_hash = index
-      .blocks(1)
-      .unwrap()
+      .blocks(1)?
       .iter()
       .map(|(_, block_hash)| block_hash)
       .collect::<Vec<_>>()[0]
       .clone();
-    let block = index.get_block_by_hash(block_hash).unwrap().unwrap();
+    let transactions = match index.get_block_by_hash(block_hash)? {
+      Some(block) => block.txdata,
+      None => vec![],
+    };
     let block_json = BlockJson {
       hash: block_hash.clone(),
-      transactions: block.txdata,
+      transactions,
     };
-    Ok(serde_json::to_string(&block_json).unwrap())
+    Ok(handle_json_result(serde_json::to_string(&block_json)))
   }
 
   pub(super) async fn inscription_json_by_id(
@@ -87,7 +78,7 @@ impl Server {
     Path(DeserializeFromStr(inscription_id)): Path<DeserializeFromStr<InscriptionId>>,
   ) -> ServerResult<String> {
     let inscription = build_inscription(&inscription_id, &index, &page_config)?;
-    Ok(serde_json::to_string(&inscription).unwrap())
+    Ok(handle_json_result(serde_json::to_string(&inscription)))
   }
 
   pub(super) async fn inscription_json_by_index(
@@ -95,12 +86,15 @@ impl Server {
     Extension(index): Extension<Arc<Index>>,
     Path(DeserializeFromStr(inscription_index)): Path<DeserializeFromStr<u64>>,
   ) -> ServerResult<String> {
-    let inscription_id = index
-      .get_inscription_id_by_inscription_number(inscription_index)
-      .unwrap()
-      .unwrap();
-    let inscription = build_inscription(&inscription_id, &index, &page_config)?;
-    Ok(serde_json::to_string(&inscription).unwrap())
+    Ok(
+      match index.get_inscription_id_by_inscription_number(inscription_index)? {
+        Some(inscription_id) => {
+          let inscription = build_inscription(&inscription_id, &index, &page_config)?;
+          handle_json_result(serde_json::to_string(&inscription))
+        }
+        None => "{}".to_string(),
+      },
+    )
   }
 
   pub(super) async fn outputs_for_block(
@@ -108,41 +102,50 @@ impl Server {
     Extension(index): Extension<Arc<Index>>,
     Path(DeserializeFromStr(block_hash)): Path<DeserializeFromStr<BlockHash>>,
   ) -> ServerResult<String> {
-    let block = index.get_block_by_hash(block_hash).unwrap().unwrap();
+    let block_option = index.get_block_by_hash(block_hash)?;
+    let block = match block_option {
+      Some(block) => block,
+      None => return Ok("{}".to_string()),
+    };
 
     let transactions = block.txdata;
 
-    let outpoints = transactions.iter().fold(vec![], |mut acc, transaction| {
-      acc.extend(
-        transaction
+    let outputs: ServerResult<Vec<OutputJson>> =
+      transactions.iter().fold(Ok(vec![]), |acc, transaction| {
+        let mut acc = acc?;
+        let output_results: ServerResult<Vec<OutputJson>> = transaction
           .output
           .iter()
           .enumerate()
-          .map(|(vout, _output)| {
+          .fold(Ok(vec![]), |acc, (vout, output)| {
+            let mut acc = acc?;
             let outpoint = OutPoint::new(transaction.txid(), vout as u32);
-            let inscriptions = index.get_inscriptions_on_output(outpoint).unwrap();
-            OutputJson {
-              inscriptions,
-              value: _output.value,
-              script_pubkey: _output.script_pubkey.clone(),
-              address: page_config.chain.address_from_script(&_output.script_pubkey).unwrap(),
-              transaction: transaction.txid(),
+            let inscriptions = index.get_inscriptions_on_output(outpoint)?;
+            if inscriptions.len() > 0 {
+              acc.push(OutputJson {
+                inscriptions,
+                value: output.value,
+                script_pubkey: output.script_pubkey.clone(),
+                address: get_address_from_txout(&page_config, &output)?,
+                transaction: transaction.txid(),
+              });
             }
-          }),
-      );
-      acc
-    });
+            Ok(acc)
+          });
+        acc.extend(output_results?);
+        Ok(acc)
+      });
 
-    Ok(serde_json::to_string(&outpoints).unwrap())
+    Ok(handle_json_result(serde_json::to_string(&outputs?)))
   }
 
   pub(super) async fn latest_inscription_json(
     Extension(page_config): Extension<Arc<PageConfig>>,
     Extension(index): Extension<Arc<Index>>,
   ) -> ServerResult<String> {
-    let latest_inscription = index.get_latest_inscriptions(1, None).unwrap()[0];
+    let latest_inscription = index.get_latest_inscriptions(1, None)?[0];
     let inscription = build_inscription(&latest_inscription, &index, &page_config)?;
-    Ok(serde_json::to_string(&inscription).unwrap())
+    Ok(handle_json_result(serde_json::to_string(&inscription)))
   }
 
   pub(super) async fn inscription_json(
@@ -161,17 +164,16 @@ impl Server {
         "range start greater than range end".to_string(),
       ));
     }
-    let inscription_ids: Vec<_> = (start..=end)
-      .map(|n| {
-        index
-          .get_inscription_id_by_inscription_number(n)
-          .unwrap()
-          .unwrap()
-      })
-      .collect();
+    let inscription_ids: ServerResult<Vec<_>> = (start..=end).fold(Ok(vec![]), |acc, n| {
+      let mut acc = acc?;
+      if let Some(inscription_id) = index.get_inscription_id_by_inscription_number(n)? {
+        acc.push(inscription_id);
+      }
+      Ok(acc)
+    });
 
     let inscription_json: Vec<InscriptionJson> =
-      inscription_ids
+      inscription_ids?
         .iter()
         .fold(Ok(vec![]), |acc: ServerResult<_>, inscription_id| {
           let acc = acc?;
@@ -179,7 +181,7 @@ impl Server {
           Ok(vec![acc, vec![inscription]].concat())
         })?;
 
-    Ok(serde_json::to_string(&inscription_json).unwrap())
+    Ok(handle_json_result(serde_json::to_string(&inscription_json)))
   }
 }
 
@@ -233,21 +235,37 @@ fn build_inscription(
     sat: entry.sat,
     satpoint,
     timestamp: entry.timestamp,
-    address: page_config
-      .chain
-      .address_from_script(&output.script_pubkey)
-      .unwrap()
-      .to_string(),
+    address: get_address_from_txout(page_config, &output)?,
     output_value: output.value,
     output,
-    preview: format!("/preview/{}", inscription_id),
-    content: format!("/content/{}", inscription_id),
-    content_len: inscription.content_length().unwrap(),
+    content_len: inscription.content_length(),
     transaction: inscription_id.txid.to_string(),
     location: satpoint.to_string(),
     offset: satpoint.offset,
-    // body: inscription.body().map(|bytes| bytes.to_vec()), // BODY is so large it's hard to see what's going on so we are commenting out for readability in tests.
-    body: Some(vec![]),
+    body: inscription.body().map(|bytes| bytes.to_vec()),
     content_type: inscription.content_type().map(|bytes| bytes.to_string()),
   })
+}
+
+fn handle_json_result(result: Result<String, Error>) -> String {
+  match result {
+    Ok(json) => json,
+    Err(err) => err.to_string(),
+  }
+}
+
+fn handle_bitcoin_error<T>(error: bitcoin::util::address::Error) -> ServerResult<T> {
+  Err(ServerError::BadRequest(error.to_string()))
+}
+
+fn get_address_from_txout(page_config: &Arc<PageConfig>, output: &TxOut) -> ServerResult<Address> {
+  let back_up = Address::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+  match page_config.chain.address_from_script(&output.script_pubkey) {
+    Ok(address) => Ok(address),
+    // Err(err) => handle_bitcoin_error(err)?,
+    Err(err) => match back_up {
+      Ok(backup) => Ok(backup),
+      Err(_) => handle_bitcoin_error(err)?,
+    },
+  }
 }
