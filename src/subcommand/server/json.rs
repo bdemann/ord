@@ -28,7 +28,6 @@ struct InscriptionJson {
   output: TxOut,
   offset: u64,
   chain: Chain,
-  body: Option<Vec<u8>>,
   content_type: Option<String>,
   next: Option<InscriptionId>,
   number: u64,
@@ -286,7 +285,6 @@ fn build_inscription(
     transaction: inscription_id.txid.to_string(),
     location: satpoint.to_string(),
     offset: satpoint.offset,
-    body: inscription.body().map(|bytes| bytes.to_vec()),
     content_type: inscription.content_type().map(|bytes| bytes.to_string()),
   })
 }
