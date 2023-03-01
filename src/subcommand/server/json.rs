@@ -2,7 +2,7 @@ use axum::{extract::Path, Extension};
 use bitcoin::{Address, BlockHash, OutPoint, Script, Transaction, TxOut, Txid};
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use super::{
   error::{OptionExt, ServerError, ServerResult},
@@ -16,7 +16,7 @@ use crate::{
 #[derive(Deserialize, Serialize, Clone)]
 struct InscriptionJson {
   inscription_id: InscriptionId,
-  address: Address,
+  address: Option<Address>,
   output_value: u64,
   sat: Option<Sat>,
   content_len: Option<usize>,
@@ -47,7 +47,7 @@ struct OutputJson {
   inscriptions: Vec<InscriptionId>,
   value: u64,
   script_pubkey: Script,
-  address: Address,
+  address: Option<Address>,
   transaction: Txid,
 }
 
@@ -105,7 +105,7 @@ impl Server {
     let block_option = index.get_block_by_hash(block_hash)?;
     let block = match block_option {
       Some(block) => block,
-      None => return Ok("{}".to_string()),
+      None => return Ok("[]".to_string()),
     };
 
     let transactions = block.txdata;
@@ -126,7 +126,10 @@ impl Server {
                 inscriptions,
                 value: output.value,
                 script_pubkey: output.script_pubkey.clone(),
-                address: get_address_from_txout(&page_config, &output)?,
+                address: page_config
+                  .chain
+                  .address_from_script(&output.script_pubkey)
+                  .ok(),
                 transaction: transaction.txid(),
               });
             }
@@ -137,6 +140,45 @@ impl Server {
       });
 
     Ok(handle_json_result(serde_json::to_string(&outputs?)))
+  }
+
+  pub(super) async fn inscriptions_for_block(
+    Extension(page_config): Extension<Arc<PageConfig>>,
+    Extension(index): Extension<Arc<Index>>,
+    Path(DeserializeFromStr(block_hash)): Path<DeserializeFromStr<BlockHash>>,
+  ) -> ServerResult<String> {
+    let block_option = index.get_block_by_hash(block_hash)?;
+    let block = match block_option {
+      Some(block) => block,
+      None => return Ok("[]".to_string()),
+    };
+
+    let transactions = block.txdata;
+
+    let inscriptions: ServerResult<Vec<InscriptionJson>> =
+      transactions.iter().fold(Ok(vec![]), |acc, transaction| {
+        let mut acc = acc?;
+        let output_results: ServerResult<Vec<InscriptionJson>> = transaction
+          .output
+          .iter()
+          .enumerate()
+          .fold(Ok(vec![]), |acc, (vout, _)| {
+            let mut acc = acc?;
+            let outpoint = OutPoint::new(transaction.txid(), vout as u32);
+            let inscriptions_ids = index.get_inscriptions_on_output(outpoint)?;
+            let inscriptions: ServerResult<Vec<InscriptionJson>> = inscriptions_ids.iter().fold(Ok(vec![]), |acc, inscription_id| {
+              let mut acc = acc?;
+              acc.push(build_inscription(inscription_id, &index, &page_config)?);
+              Ok(acc)
+            });
+            acc.extend(inscriptions?);
+            Ok(acc)
+          });
+        acc.extend(output_results?);
+        Ok(acc)
+      });
+
+    Ok(handle_json_result(serde_json::to_string(&inscriptions?)))
   }
 
   pub(super) async fn latest_inscription_json(
@@ -235,7 +277,10 @@ fn build_inscription(
     sat: entry.sat,
     satpoint,
     timestamp: entry.timestamp,
-    address: get_address_from_txout(page_config, &output)?,
+    address: page_config
+      .chain
+      .address_from_script(&output.script_pubkey)
+      .ok(),
     output_value: output.value,
     output,
     content_len: inscription.content_length(),
@@ -251,21 +296,5 @@ fn handle_json_result(result: Result<String, Error>) -> String {
   match result {
     Ok(json) => json,
     Err(err) => err.to_string(),
-  }
-}
-
-fn handle_bitcoin_error<T>(error: bitcoin::util::address::Error) -> ServerResult<T> {
-  Err(ServerError::BadRequest(error.to_string()))
-}
-
-fn get_address_from_txout(page_config: &Arc<PageConfig>, output: &TxOut) -> ServerResult<Address> {
-  let back_up = Address::from_str("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-  match page_config.chain.address_from_script(&output.script_pubkey) {
-    Ok(address) => Ok(address),
-    // Err(err) => handle_bitcoin_error(err)?,
-    Err(err) => match back_up {
-      Ok(backup) => Ok(backup),
-      Err(_) => handle_bitcoin_error(err)?,
-    },
   }
 }

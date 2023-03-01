@@ -155,6 +155,7 @@ impl Server {
         .route("/inscription-by-index-json/:index", get(Self::inscription_json_by_index))
         .route("/latests-inscription-json/:index", get(Self::latest_inscription_json))
         .route("/outputs-for-block/:block_hash", get(Self::outputs_for_block))
+        .route("/inscriptions-for-block/:block_hash", get(Self::inscriptions_for_block))
         .route("/block-count", get(Self::block_count))
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))
