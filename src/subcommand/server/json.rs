@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
   decimal::Decimal, degree::Degree, deserialize_from_str::DeserializeFromStr, height::Height,
-  templates::PageConfig, Chain, Epoch, Index, InscriptionId, Rarity, Sat, SatPoint,
+  templates::PageConfig, Chain, Epoch, Index, InscriptionId, Rarity, SatPoint,
 };
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -18,7 +18,7 @@ struct InscriptionJson {
   inscription_id: InscriptionId,
   address: Option<Address>,
   output_value: u64,
-  sat: SatJson,
+  sat: Option<SatJson>,
   content_len: Option<usize>,
   genesis_height: u64,
   genesis_fee: u64,
@@ -292,26 +292,21 @@ fn build_inscription(
   };
 
   let next = index.get_inscription_id_by_inscription_number(entry.number + 1)?;
-  let sat = match entry.sat {
-    Some(sat) => sat,
-    None => {
-      let inscription_sat_point = index.get_inscription_satpoint_by_id(inscription_id)?;
-      panic!();
-    }
-  };
-
-  let sat_json = SatJson {
-    number: sat.n(),
-    decimal: sat.decimal(),
-    degree: sat.degree(),
-    percentile: sat.percentile(),
-    name: sat.name(),
-    cycle: sat.cycle(),
-    epoch: sat.epoch(),
-    period: sat.period(),
-    block: sat.height(),
-    offset: sat.third(),
-    rarity: sat.rarity(),
+  let sat_json = match entry.sat {
+    Some(sat) => Some(SatJson {
+      number: sat.n(),
+      decimal: sat.decimal(),
+      degree: sat.degree(),
+      percentile: sat.percentile(),
+      name: sat.name(),
+      cycle: sat.cycle(),
+      epoch: sat.epoch(),
+      period: sat.period(),
+      block: sat.height(),
+      offset: sat.third(),
+      rarity: sat.rarity(),
+    }),
+    None => None,
   };
 
   Ok(InscriptionJson {

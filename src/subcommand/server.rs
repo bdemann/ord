@@ -174,7 +174,7 @@ impl Server {
         .route("/install.sh", get(Self::install_script))
         .route("/latest-block-id", get(Self::latest_block_id))
         .route("/latest-block-json", get(Self::latest_block))
-        .route("/latest-inscription-json/:index", get(Self::latest_inscription_json))
+        .route("/latest-inscription-json", get(Self::latest_inscription_json))
         .route("/ordinal/:sat", get(Self::ordinal))
         .route("/output/:output", get(Self::output))
         .route("/outputs-for-block/:block_index", get(Self::outputs_for_block))
