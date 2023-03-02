@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, serde::Serialize, serde::Deserialize, Clone)]
 pub(crate) struct Decimal {
   height: Height,
   offset: u64,

@@ -9,8 +9,8 @@ use super::{
   server::Server,
 };
 use crate::{
-  deserialize_from_str::DeserializeFromStr, templates::PageConfig, Chain, Index, InscriptionId,
-  Sat, SatPoint,
+  decimal::Decimal, degree::Degree, deserialize_from_str::DeserializeFromStr, height::Height,
+  templates::PageConfig, Chain, Epoch, Index, InscriptionId, Rarity, Sat, SatPoint,
 };
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -18,7 +18,7 @@ struct InscriptionJson {
   inscription_id: InscriptionId,
   address: Option<Address>,
   output_value: u64,
-  sat: Option<Sat>,
+  sat: SatJson,
   content_len: Option<usize>,
   genesis_height: u64,
   genesis_fee: u64,
@@ -33,6 +33,35 @@ struct InscriptionJson {
   number: u64,
   previous: Option<InscriptionId>,
   satpoint: SatPoint,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DecimalJson {
+  height: u64,
+  offset: u64,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct DegreeJson {
+  hour: u64,
+  minute: u64,
+  second: u64,
+  third: u64,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
+struct SatJson {
+  number: u64,
+  decimal: Decimal,
+  degree: Degree,
+  percentile: String,
+  name: String,
+  cycle: u64,
+  epoch: Epoch,
+  period: u64,
+  block: Height,
+  offset: u64,
+  rarity: Rarity,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -263,6 +292,27 @@ fn build_inscription(
   };
 
   let next = index.get_inscription_id_by_inscription_number(entry.number + 1)?;
+  let sat = match entry.sat {
+    Some(sat) => sat,
+    None => {
+      let inscription_sat_point = index.get_inscription_satpoint_by_id(inscription_id)?;
+      panic!();
+    }
+  };
+
+  let sat_json = SatJson {
+    number: sat.n(),
+    decimal: sat.decimal(),
+    degree: sat.degree(),
+    percentile: sat.percentile(),
+    name: sat.name(),
+    cycle: sat.cycle(),
+    epoch: sat.epoch(),
+    period: sat.period(),
+    block: sat.height(),
+    offset: sat.third(),
+    rarity: sat.rarity(),
+  };
 
   Ok(InscriptionJson {
     chain: page_config.chain,
@@ -272,7 +322,7 @@ fn build_inscription(
     next,
     number: entry.number,
     previous,
-    sat: entry.sat,
+    sat: sat_json,
     satpoint,
     timestamp: entry.timestamp,
     address: page_config

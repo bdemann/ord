@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Rarity {
   Common,
   Uncommon,

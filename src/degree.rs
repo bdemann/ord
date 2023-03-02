@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, serde::Deserialize, serde::Serialize, Clone)]
 pub(crate) struct Degree {
   pub(crate) hour: u64,
   pub(crate) minute: u64,
