@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Copy, Clone, Debug, Display, FromStr, Ord, Eq, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Display, FromStr, Ord, Eq, PartialEq, PartialOrd, serde::Serialize, serde::Deserialize)]
 pub(crate) struct Height(pub(crate) u64);
 
 impl Height {
