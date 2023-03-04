@@ -636,10 +636,17 @@ impl Index {
   }
 
   pub(crate) fn get_transaction(&self, txid: Txid) -> Result<Option<Transaction>> {
-    if txid == self.genesis_block_coinbase_txid {
+    let thing = if txid == self.genesis_block_coinbase_txid {
       Ok(Some(self.genesis_block_coinbase_transaction.clone()))
     } else {
       self.client.get_raw_transaction(&txid, None).into_option()
+    };
+    match thing {
+        Ok(thing) => Ok(thing),
+        Err(_) => {
+          println!("==== The error was here in fact ====");
+          Ok(Some(self.client.get_transaction(&txid, None)?.transaction()?))
+        },
     }
   }
 
