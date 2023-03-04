@@ -133,6 +133,7 @@ impl Server {
     Extension(index): Extension<Arc<Index>>,
     Path(DeserializeFromStr(inscription_index)): Path<DeserializeFromStr<u64>>,
   ) -> ServerResult<String> {
+    println!("Getting inscription by index");
     Ok(
       match index.get_inscription_id_by_inscription_number(inscription_index)? {
         Some(inscription_id) => {
@@ -259,6 +260,7 @@ fn build_inscription(
   index: &Arc<Index>,
   page_config: &Arc<PageConfig>,
 ) -> ServerResult<InscriptionJson> {
+  println!("Starting to build inscription");
   let inscription_id = inscription_id.clone();
 
   let entry = index
@@ -273,6 +275,8 @@ fn build_inscription(
     .get_inscription_satpoint_by_id(inscription_id)?
     .ok_or_not_found(|| format!("inscription {inscription_id}"))?;
 
+  println!("Get Output");
+
   let output = index
     .get_transaction(satpoint.outpoint.txid)?
     .ok_or_not_found(|| format!("inscription {inscription_id} current transaction"))?
@@ -280,6 +284,8 @@ fn build_inscription(
     .into_iter()
     .nth(satpoint.outpoint.vout.try_into().unwrap())
     .ok_or_not_found(|| format!("inscription {inscription_id} current transaction output"))?;
+
+  println!("Cool checkpoint dude");
 
   let previous = if let Some(previous) = entry.number.checked_sub(1) {
     Some(
@@ -290,6 +296,8 @@ fn build_inscription(
   } else {
     None
   };
+
+  println!("Another checkpoint");
 
   let next = index.get_inscription_id_by_inscription_number(entry.number + 1)?;
   let sat_json = match entry.sat {
@@ -308,6 +316,8 @@ fn build_inscription(
     }),
     None => None,
   };
+
+  println!("creating inscription");
 
   Ok(InscriptionJson {
     chain: page_config.chain,
