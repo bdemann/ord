@@ -277,6 +277,26 @@ fn build_inscription(
 
   println!("Get Output");
 
+  let thing_one = match index.get_transaction(satpoint.outpoint.txid) {
+    Ok(thing_one) => thing_one,
+    Err(err) => todo!("Thing one was the problem: {}", err),
+  };
+  match &thing_one {
+    Some(thing_two) => thing_two,
+    None => todo!("Thing one was None"),
+  };
+
+  println!("Getting some sort of index I guess");
+  let thing_two = satpoint.outpoint.vout.try_into().unwrap();
+
+  println!("Using that index I guess");
+  let thing_three = thing_one.into_iter().nth(thing_two);
+
+  match thing_three {
+    Some(_) => println!("Thing three was some"),
+    None => todo!("Thing three was none"),
+}
+
   let output = index
     .get_transaction(satpoint.outpoint.txid)?
     .ok_or_not_found(|| format!("inscription {inscription_id} current transaction"))?
