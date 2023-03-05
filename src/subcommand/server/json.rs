@@ -17,7 +17,7 @@ use crate::{
 struct InscriptionJson {
   inscription_id: InscriptionId,
   address: Option<Address>,
-  output_value: u64,
+  output_value: Option<u64>,
   sat: Option<SatJson>,
   content_len: Option<usize>,
   genesis_height: u64,
@@ -25,7 +25,7 @@ struct InscriptionJson {
   timestamp: u32,
   transaction: String,
   location: String,
-  output: TxOut,
+  output: Option<TxOut>,
   offset: u64,
   chain: Chain,
   content_type: Option<String>,
@@ -133,7 +133,6 @@ impl Server {
     Extension(index): Extension<Arc<Index>>,
     Path(DeserializeFromStr(inscription_index)): Path<DeserializeFromStr<u64>>,
   ) -> ServerResult<String> {
-    println!("Getting inscription by index");
     Ok(
       match index.get_inscription_id_by_inscription_number(inscription_index)? {
         Some(inscription_id) => {
@@ -260,7 +259,6 @@ fn build_inscription(
   index: &Arc<Index>,
   page_config: &Arc<PageConfig>,
 ) -> ServerResult<InscriptionJson> {
-  println!("Starting to build inscription");
   let inscription_id = inscription_id.clone();
 
   let entry = index
@@ -275,37 +273,38 @@ fn build_inscription(
     .get_inscription_satpoint_by_id(inscription_id)?
     .ok_or_not_found(|| format!("inscription {inscription_id}"))?;
 
-  println!("Get Output");
-
-  let thing_one = match index.get_transaction(satpoint.outpoint.txid) {
-    Ok(thing_one) => thing_one,
-    Err(err) => todo!("Thing one was the problem: {}", err),
-  };
-  match &thing_one {
-    Some(thing_two) => thing_two,
-    None => todo!("Thing one was None"),
+  let transaction = match index.get_transaction(satpoint.outpoint.txid) {
+    Ok(transaction) => transaction,
+    Err(_) => match index.gettransaction(satpoint.outpoint.txid) {
+      Ok(transaction) => transaction,
+      Err(_) => None,
+    },
   };
 
-  println!("Getting some sort of index I guess");
-  let thing_two = satpoint.outpoint.vout.try_into().unwrap();
+  let output = match &transaction {
+    Some(transaction) => Some(
+      transaction
+        .output
+        .clone()
+        .into_iter()
+        .nth(satpoint.outpoint.vout.try_into().unwrap())
+        .ok_or_not_found(|| format!("inscription {inscription_id} current transaction output"))?,
+    ),
+    None => None,
+  };
 
-  println!("Using that index I guess");
-  let thing_three = thing_one.into_iter().nth(thing_two);
+  let address = match &output {
+    Some(output) => page_config
+      .chain
+      .address_from_script(&output.script_pubkey)
+      .ok(),
+    None => None,
+  };
 
-  match thing_three {
-    Some(_) => println!("Thing three was some"),
-    None => todo!("Thing three was none"),
-}
-
-  let output = index
-    .get_transaction(satpoint.outpoint.txid)?
-    .ok_or_not_found(|| format!("inscription {inscription_id} current transaction"))?
-    .output
-    .into_iter()
-    .nth(satpoint.outpoint.vout.try_into().unwrap())
-    .ok_or_not_found(|| format!("inscription {inscription_id} current transaction output"))?;
-
-  println!("Cool checkpoint dude");
+  let output_value = match &output {
+    Some(output) => Some(output.value),
+    None => None,
+  };
 
   let previous = if let Some(previous) = entry.number.checked_sub(1) {
     Some(
@@ -316,8 +315,6 @@ fn build_inscription(
   } else {
     None
   };
-
-  println!("Another checkpoint");
 
   let next = index.get_inscription_id_by_inscription_number(entry.number + 1)?;
   let sat_json = match entry.sat {
@@ -337,8 +334,6 @@ fn build_inscription(
     None => None,
   };
 
-  println!("creating inscription");
-
   Ok(InscriptionJson {
     chain: page_config.chain,
     genesis_fee: entry.fee,
@@ -350,11 +345,8 @@ fn build_inscription(
     sat: sat_json,
     satpoint,
     timestamp: entry.timestamp,
-    address: page_config
-      .chain
-      .address_from_script(&output.script_pubkey)
-      .ok(),
-    output_value: output.value,
+    address,
+    output_value,
     output,
     content_len: inscription.content_length(),
     transaction: inscription_id.txid.to_string(),
