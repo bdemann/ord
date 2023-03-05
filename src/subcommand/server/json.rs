@@ -225,9 +225,6 @@ impl Server {
       DeserializeFromStr<u64>,
     )>,
   ) -> ServerResult<String> {
-    if start == end {
-      return Err(ServerError::BadRequest("empty range".to_string()));
-    }
     if start > end {
       return Err(ServerError::BadRequest(
         "range start greater than range end".to_string(),
