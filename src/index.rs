@@ -636,17 +636,25 @@ impl Index {
   }
 
   pub(crate) fn get_transaction(&self, txid: Txid) -> Result<Option<Transaction>> {
-    let thing = if txid == self.genesis_block_coinbase_txid {
+    if txid == self.genesis_block_coinbase_txid {
       Ok(Some(self.genesis_block_coinbase_transaction.clone()))
     } else {
       self.client.get_raw_transaction(&txid, None).into_option()
-    };
-    match thing {
-        Ok(thing) => Ok(thing),
-        Err(_) => {
-          println!("==== The error was here in fact ====");
-          Ok(Some(self.client.get_transaction(&txid, None)?.transaction()?))
-        },
+    }
+  }
+
+  pub(crate) fn gettransaction(&self, txid: Txid) -> Result<Option<Transaction>> {
+    // Sometimes running get_transaction() gave the following error:
+    // JSON-RPC error: RPC error response: RpcError { code: -5, message: "No
+    // such mempool or blockchain transaction. Use gettransaction for wallet
+    // transactions.", data: None }
+    // If we get that error then can try running this function which will call
+    // client.get_transaction which does calls the rpc gettransaction instead of
+    // client.call_raw_transaction which does the rps getrawtransaction
+    if txid == self.genesis_block_coinbase_txid {
+      Ok(Some(self.genesis_block_coinbase_transaction.clone()))
+    } else {
+      Ok(Some(self.client.get_transaction(&txid, None)?.transaction()?))
     }
   }
 
