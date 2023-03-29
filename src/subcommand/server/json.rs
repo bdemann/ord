@@ -33,6 +33,7 @@ struct InscriptionJson {
   number: u64,
   previous: Option<InscriptionId>,
   satpoint: SatPoint,
+  original_owner: Option<Address>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -331,6 +332,16 @@ fn build_inscription(
     None => None,
   };
 
+  let original_owner = match &output {
+    Some(output) => {
+      match page_config.chain.address_from_script(&output.script_pubkey) {
+        Ok(original_owner) => Some(original_owner),
+        Err(_) => None,
+    }
+    },
+    None => None,
+};
+
   Ok(InscriptionJson {
     chain: page_config.chain,
     genesis_fee: entry.fee,
@@ -350,6 +361,7 @@ fn build_inscription(
     location: satpoint.to_string(),
     offset: satpoint.offset,
     content_type: inscription.content_type().map(|bytes| bytes.to_string()),
+    original_owner,
   })
 }
 
