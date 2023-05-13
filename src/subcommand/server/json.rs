@@ -332,15 +332,22 @@ fn build_inscription(
     None => None,
   };
 
-  let original_owner = match &output {
-    Some(output) => {
-      match page_config.chain.address_from_script(&output.script_pubkey) {
-        Ok(original_owner) => Some(original_owner),
-        Err(_) => None,
-    }
-    },
+  let genesis_transaction_id = inscription_id.txid;
+  let genesis_transaction = index.get_transaction(genesis_transaction_id)?;
+  let genesis_output = match genesis_transaction {
+    Some(transaction) => transaction
+      .output
+      .into_iter()
+      .nth(satpoint.outpoint.vout.try_into().unwrap()),
     None => None,
-};
+  };
+  let original_owner = match genesis_output {
+    Some(genesis_output) => page_config
+      .chain
+      .address_from_script(&genesis_output.script_pubkey)
+      .ok(),
+    None => None,
+  };
 
   Ok(InscriptionJson {
     chain: page_config.chain,
