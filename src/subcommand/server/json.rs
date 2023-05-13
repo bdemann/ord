@@ -338,7 +338,7 @@ fn build_inscription(
     Some(transaction) => transaction
       .output
       .into_iter()
-      .nth(satpoint.outpoint.vout.try_into().unwrap()),
+      .nth(satpoint.offset.try_into().unwrap()),
     None => None,
   };
   let original_owner = match genesis_output {
