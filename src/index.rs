@@ -824,7 +824,7 @@ impl Index {
   pub(crate) fn get_latest_inscriptions(
     &self,
     n: usize,
-    from: Option<u64>,
+    from: Option<i64>,
   ) -> Result<Vec<InscriptionId>> {
     let rtx = self.database.begin_read()?;
 

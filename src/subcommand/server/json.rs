@@ -30,7 +30,7 @@ struct InscriptionJson {
   chain: Chain,
   content_type: Option<String>,
   next: Option<InscriptionId>,
-  number: u64,
+  number: i64,
   previous: Option<InscriptionId>,
   satpoint: SatPoint,
   original_owner: Option<Address>,
@@ -132,7 +132,7 @@ impl Server {
   pub(super) async fn inscription_json_by_index(
     Extension(page_config): Extension<Arc<PageConfig>>,
     Extension(index): Extension<Arc<Index>>,
-    Path(DeserializeFromStr(inscription_index)): Path<DeserializeFromStr<u64>>,
+    Path(DeserializeFromStr(inscription_index)): Path<DeserializeFromStr<i64>>,
   ) -> ServerResult<String> {
     Ok(
       match index.get_inscription_id_by_inscription_number(inscription_index)? {
@@ -222,8 +222,8 @@ impl Server {
     Extension(page_config): Extension<Arc<PageConfig>>,
     Extension(index): Extension<Arc<Index>>,
     Path((DeserializeFromStr(start), DeserializeFromStr(end))): Path<(
-      DeserializeFromStr<u64>,
-      DeserializeFromStr<u64>,
+      DeserializeFromStr<i64>,
+      DeserializeFromStr<i64>,
     )>,
   ) -> ServerResult<String> {
     if start > end {
