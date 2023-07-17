@@ -654,7 +654,9 @@ impl Index {
     if txid == self.genesis_block_coinbase_txid {
       Ok(Some(self.genesis_block_coinbase_transaction.clone()))
     } else {
-      Ok(Some(self.client.get_transaction(&txid, None)?.transaction()?))
+      Ok(Some(
+        self.client.get_transaction(&txid, None)?.transaction()?,
+      ))
     }
   }
 
@@ -832,7 +834,10 @@ impl Index {
       rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
 
     let latest = match inscription_number_to_inscription_id.iter()?.rev().next() {
-      Some((number, _id)) => number.value(),
+      Some(result) => {
+        let (number, _id) = result?;
+        number.value()
+      }
       None => return Ok(Default::default()),
     };
 
@@ -842,7 +847,10 @@ impl Index {
       .range(..=from)?
       .rev()
       .take(n)
-      .map(|(_number, id)| Entry::load(*id.value()))
+      .filter_map(|result| match result {
+        Ok((_number, id)) => Some(Entry::load(*id.value())),
+        Err(_) => None,
+      })
       .collect();
 
     Ok(inscriptions)
