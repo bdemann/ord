@@ -1,5 +1,5 @@
 use axum::{extract::Path, Extension};
-use bitcoin::{Address, Block, BlockHash, OutPoint, Script, Transaction, TxOut, Txid};
+use bitcoin::{Block, BlockHash, OutPoint, Transaction, TxOut, Txid};
 use serde::{Deserialize, Serialize};
 use serde_json::Error;
 use std::sync::Arc;
@@ -13,10 +13,13 @@ use crate::{
   templates::PageConfig, Chain, Epoch, Index, InscriptionId, Rarity, SatPoint,
 };
 
+type AddressJson = String;
+type ScriptJson = String;
+
 #[derive(Deserialize, Serialize, Clone)]
 struct InscriptionJson {
   inscription_id: InscriptionId,
-  address: Option<Address>,
+  address: Option<AddressJson>,
   output_value: Option<u64>,
   sat: Option<SatJson>,
   content_len: Option<usize>,
@@ -33,7 +36,7 @@ struct InscriptionJson {
   number: i64,
   previous: Option<InscriptionId>,
   satpoint: SatPoint,
-  original_owner: Option<Address>,
+  original_owner: Option<AddressJson>,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
@@ -75,8 +78,8 @@ struct BlockJson {
 struct OutputJson {
   inscriptions: Vec<InscriptionId>,
   value: u64,
-  script_pubkey: Script,
-  address: Option<Address>,
+  script_pubkey: ScriptJson,
+  address: Option<AddressJson>,
   transaction: Txid,
 }
 
@@ -297,7 +300,7 @@ fn build_inscription(
       .address_from_script(&output.script_pubkey)
       .ok(),
     None => None,
-  };
+  }.map(|address| address.to_string());
 
   let output_value = match &output {
     Some(output) => Some(output.value),
@@ -347,7 +350,7 @@ fn build_inscription(
       .address_from_script(&genesis_output.script_pubkey)
       .ok(),
     None => None,
-  };
+  }.map(|address| address.to_string());
 
   Ok(InscriptionJson {
     chain: page_config.chain,
@@ -401,11 +404,11 @@ fn get_outputs_from_block(
             acc.push(OutputJson {
               inscriptions,
               value: output.value,
-              script_pubkey: output.script_pubkey.clone(),
+              script_pubkey: output.script_pubkey.to_string(),
               address: page_config
                 .chain
                 .address_from_script(&output.script_pubkey)
-                .ok(),
+                .ok().map(|address| address.to_string()),
               transaction: transaction.txid(),
             });
           }
