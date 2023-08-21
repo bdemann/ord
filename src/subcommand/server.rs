@@ -222,6 +222,7 @@ impl Server {
         .route("/search/:query", get(Self::search_by_path))
         .route("/static/*path", get(Self::static_asset))
         .route("/status", get(Self::status))
+        .route("/test", get(Self::test))
         .route("/tx/:txid", get(Self::transaction))
         .layer(Extension(index))
         .layer(Extension(page_config))

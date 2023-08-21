@@ -164,6 +164,10 @@ impl Server {
     Ok(handle_json_result(serde_json::to_string(&outputs?)))
   }
 
+  pub (super) async fn test() -> ServerResult<String> {
+    Ok("Test complete".to_string())
+  }
+
   pub(super) async fn outputs_for_block(
     Extension(page_config): Extension<Arc<PageConfig>>,
     Extension(index): Extension<Arc<Index>>,
