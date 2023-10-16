@@ -1,6 +1,7 @@
+mod types;
+
 use axum::{extract::Path, Extension};
-use bitcoin::{Block, BlockHash, OutPoint, Transaction, TxOut, Txid};
-use serde::{Deserialize, Serialize};
+use bitcoin::{Block, BlockHash, OutPoint};
 use serde_json::Error;
 use std::sync::Arc;
 
@@ -9,79 +10,10 @@ use super::{
   server::Server,
 };
 use crate::{
-  decimal::Decimal, degree::Degree, deserialize_from_str::DeserializeFromStr, height::Height,
-  templates::PageConfig, Chain, Epoch, Index, InscriptionId, Rarity, SatPoint,
+  deserialize_from_str::DeserializeFromStr,
+  templates::PageConfig, Index, InscriptionId,
 };
-
-type AddressJson = String;
-type ScriptJson = String;
-
-#[derive(Deserialize, Serialize, Clone)]
-struct InscriptionJson {
-  inscription_id: InscriptionId,
-  address: Option<AddressJson>,
-  output_value: Option<u64>,
-  sat: Option<SatJson>,
-  content_len: Option<usize>,
-  genesis_height: u64,
-  genesis_fee: u64,
-  timestamp: u32,
-  transaction: String,
-  location: String,
-  output: Option<TxOut>,
-  offset: u64,
-  chain: Chain,
-  content_type: Option<String>,
-  next: Option<InscriptionId>,
-  number: i64,
-  previous: Option<InscriptionId>,
-  satpoint: SatPoint,
-  original_owner: Option<AddressJson>,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-struct DecimalJson {
-  height: u64,
-  offset: u64,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-struct DegreeJson {
-  hour: u64,
-  minute: u64,
-  second: u64,
-  third: u64,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-struct SatJson {
-  number: u64,
-  decimal: Decimal,
-  degree: Degree,
-  percentile: String,
-  name: String,
-  cycle: u64,
-  epoch: Epoch,
-  period: u64,
-  block: Height,
-  offset: u64,
-  rarity: Rarity,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-struct BlockJson {
-  hash: BlockHash,
-  transactions: Vec<Transaction>,
-}
-
-#[derive(Deserialize, Serialize, Clone)]
-struct OutputJson {
-  inscriptions: Vec<InscriptionId>,
-  value: u64,
-  script_pubkey: ScriptJson,
-  address: Option<AddressJson>,
-  transaction: Txid,
-}
+use types::{BlockJson, InscriptionJson, SatJson, OutputJson};
 
 impl Server {
   pub(super) async fn latest_block(
