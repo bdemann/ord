@@ -53,7 +53,7 @@ impl Server {
   }
 
   pub(super) async fn test() -> ServerResult<String> {
-    Ok("Added pagination".to_string())
+    Ok("Added pagination and count".to_string())
   }
 
   pub(super) async fn outputs_for_block(
@@ -106,6 +106,20 @@ impl Server {
       count,
     )
     .await
+  }
+
+  pub(super) async fn inscription_count_for_block(
+    Extension(index): Extension<Arc<Index>>,
+    Path(DeserializeFromStr(block_index)): Path<DeserializeFromStr<u64>>,
+  ) -> ServerResult<String> {
+    inscription::inscription_count_for_block(index, block_index).await
+  }
+
+  pub(super) async fn inscription_count_for_block_by_hash(
+    Extension(index): Extension<Arc<Index>>,
+    Path(DeserializeFromStr(block_hash)): Path<DeserializeFromStr<BlockHash>>,
+  ) -> ServerResult<String> {
+    inscription::inscription_count_for_block_by_hash(index, block_hash).await
   }
 
   pub(super) async fn latest_inscription_json(

@@ -155,3 +155,35 @@ pub(super) async fn paginated_inscriptions_for_block_by_hash(
 
   Ok(handle_json_result(serde_json::to_string(&inscriptions?)))
 }
+
+pub(super) async fn inscription_count_for_block(
+  index: Arc<Index>,
+  block_index: u64,
+) -> ServerResult<String> {
+  let block_option = index.get_block_by_height(block_index)?;
+  let block = match block_option {
+    Some(block) => block,
+    None => return Ok("[]".to_string()),
+  };
+
+  let inscription_count = get_inscriptions::get_inscription_count_on_block(&block, &index);
+
+  Ok(handle_json_result(serde_json::to_string(
+    &inscription_count?,
+  )))
+}
+
+pub(super) async fn inscription_count_for_block_by_hash(
+  index: Arc<Index>,
+  block_hash: BlockHash,
+) -> ServerResult<String> {
+  let block_option = index.get_block_by_hash(block_hash)?;
+  let block = match block_option {
+    Some(block) => block,
+    None => return Ok("[]".to_string()),
+  };
+
+  let inscriptions = get_inscriptions::get_inscription_count_on_block(&block, &index);
+
+  Ok(handle_json_result(serde_json::to_string(&inscriptions?)))
+}

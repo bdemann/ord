@@ -38,6 +38,14 @@ pub(super) fn get_paginated_inscriptions_from_block(
   get_inscriptions_from_inscription_ids(page_of_inscriptions, index, page_config)
 }
 
+pub(super) fn get_inscription_count_on_block(
+  block: &Block,
+  index: &Arc<Index>,
+) -> ServerResult<usize> {
+  let inscription_ids = get_inscription_ids_for_block(block, index)?;
+  Ok(inscription_ids.len())
+}
+
 // Method 3 get the transactions and just get the inscriptions for each transaction
 pub(super) fn get_transactions_from_block(block: &Block) -> &Vec<Transaction> {
   return &block.txdata;
