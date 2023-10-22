@@ -34,6 +34,11 @@ pub(super) fn get_paginated_inscriptions_from_block(
 ) -> ServerResult<Vec<InscriptionJson>> {
   let inscription_ids = get_inscription_ids_for_block(block, index)?;
   let end_index = start + count;
+  let end_index = if end_index > inscription_ids.len() {
+    inscription_ids.len()
+  } else {
+    end_index
+  };
   let page_of_inscriptions = &inscription_ids[start..end_index];
   get_inscriptions_from_inscription_ids(page_of_inscriptions, index, page_config)
 }
