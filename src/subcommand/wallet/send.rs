@@ -1,12 +1,12 @@
 use {super::*, crate::subcommand::wallet::transaction_builder::Target, crate::wallet::Wallet};
 
-#[derive(Debug, Parser)]
+#[derive(Debug, Parser, Clone)]
 pub(crate) struct Send {
   address: Address<NetworkUnchecked>,
   outgoing: Outgoing,
-  #[clap(long, help = "Use fee rate of <FEE_RATE> sats/vB")]
+  #[arg(long, help = "Use fee rate of <FEE_RATE> sats/vB")]
   fee_rate: FeeRate,
-  #[clap(
+  #[arg(
     long,
     help = "Target amount of postage to include with sent inscriptions. Default `10000sat`"
   )]
@@ -19,7 +19,7 @@ pub struct Output {
 }
 
 impl Send {
-  pub(crate) fn run(self, options: Options) -> Result {
+  pub(crate) fn run(self, options: Options) -> SubcommandResult {
     let address = self
       .address
       .clone()
@@ -28,11 +28,15 @@ impl Send {
     let index = Index::open(&options)?;
     index.update()?;
 
+    let chain = options.chain();
+
     let client = options.bitcoin_rpc_client_for_wallet_command(false)?;
 
     let unspent_outputs = index.get_unspent_outputs(Wallet::load(&options)?)?;
 
-    let inscriptions = index.get_inscriptions(unspent_outputs.clone())?;
+    let locked_outputs = index.get_locked_outputs(Wallet::load(&options)?)?;
+
+    let inscriptions = index.get_inscriptions(&unspent_outputs)?;
 
     let satpoint = match self.outgoing {
       Outgoing::SatPoint(satpoint) => {
@@ -49,14 +53,13 @@ impl Send {
       Outgoing::Amount(amount) => {
         Self::lock_inscriptions(&client, inscriptions, unspent_outputs)?;
         let txid = Self::send_amount(&client, amount, address, self.fee_rate.n())?;
-        print_json(Output { transaction: txid })?;
-        return Ok(());
+        return Ok(Box::new(Output { transaction: txid }));
       }
     };
 
     let change = [
-      get_change_address(&client, &options)?,
-      get_change_address(&client, &options)?,
+      get_change_address(&client, chain)?,
+      get_change_address(&client, chain)?,
     ];
 
     let postage = if let Some(postage) = self.postage {
@@ -69,6 +72,7 @@ impl Send {
       satpoint,
       inscriptions,
       unspent_outputs,
+      locked_outputs,
       address.clone(),
       change,
       self.fee_rate,
@@ -82,9 +86,7 @@ impl Send {
 
     let txid = client.send_raw_transaction(&signed_tx)?;
 
-    println!("{txid}");
-
-    Ok(())
+    Ok(Box::new(Output { transaction: txid }))
   }
 
   fn lock_inscriptions(

@@ -6,6 +6,34 @@ pub struct InscriptionId {
   pub index: u32,
 }
 
+impl Default for InscriptionId {
+  fn default() -> Self {
+    Self {
+      txid: Txid::all_zeros(),
+      index: 0,
+    }
+  }
+}
+
+impl InscriptionId {
+  pub(crate) fn parent_value(self) -> Vec<u8> {
+    let index = self.index.to_le_bytes();
+    let mut index_slice = index.as_slice();
+
+    while index_slice.last().copied() == Some(0) {
+      index_slice = &index_slice[0..index_slice.len() - 1];
+    }
+
+    self
+      .txid
+      .to_byte_array()
+      .iter()
+      .chain(index_slice)
+      .copied()
+      .collect()
+  }
+}
+
 impl<'de> Deserialize<'de> for InscriptionId {
   fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
   where
@@ -82,12 +110,6 @@ impl FromStr for InscriptionId {
       txid: txid.parse().map_err(ParseError::Txid)?,
       index: vout.parse().map_err(ParseError::Index)?,
     })
-  }
-}
-
-impl From<Txid> for InscriptionId {
-  fn from(txid: Txid) -> Self {
-    Self { txid, index: 0 }
   }
 }
 
