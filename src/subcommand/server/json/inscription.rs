@@ -38,7 +38,7 @@ pub(super) async fn latest_inscription_json(
   page_config: Arc<PageConfig>,
   index: Arc<Index>,
 ) -> ServerResult<String> {
-  let latest_inscription = index.get_latest_inscriptions(1, None)?[0];
+  let latest_inscription = index.get_latest_inscriptions_with_prev_and_next(1, None)?.0[0];
   let inscription =
     build_inscription::build_inscription(&latest_inscription, &index, &page_config)?;
   Ok(handle_json_result(serde_json::to_string(&inscription)))

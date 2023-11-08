@@ -61,7 +61,7 @@ pub(super) fn build_inscription(
     None => None,
   };
 
-  let previous = if let Some(previous) = entry.number.checked_sub(1) {
+  let previous = if let Some(previous) = entry.inscription_number.checked_sub(1) {
     Some(
       index
         .get_inscription_id_by_inscription_number(previous)?
@@ -71,7 +71,7 @@ pub(super) fn build_inscription(
     None
   };
 
-  let next = index.get_inscription_id_by_inscription_number(entry.number + 1)?;
+  let next = index.get_inscription_id_by_inscription_number(entry.inscription_number + 1)?;
   let sat_json = match entry.sat {
     Some(sat) => Some(SatJson {
       number: sat.n(),
@@ -113,7 +113,7 @@ pub(super) fn build_inscription(
     genesis_height: entry.height,
     inscription_id: inscription_id.clone(),
     next,
-    number: entry.number,
+    number: entry.inscription_number,
     previous,
     sat: sat_json,
     satpoint,
