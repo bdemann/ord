@@ -62,11 +62,11 @@ pub(super) fn build_inscription(
   };
 
   let previous = if let Some(previous) = entry.inscription_number.checked_sub(1) {
-    Some(
-      index
-        .get_inscription_id_by_inscription_number(previous)?
-        .ok_or_not_found(|| format!("inscription {previous}"))?,
-    )
+    if let Ok(previous) = index.get_inscription_id_by_inscription_number(previous) {
+      previous
+    } else {
+      None
+    }
   } else {
     None
   };
