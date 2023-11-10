@@ -21,9 +21,9 @@ pub(super) struct TransactionsWithInscriptionId {
   pub inscription_ids: Vec<InscriptionId>,
 }
 
-pub(super) fn create_inscription_json(inscription_id: InscriptionId) -> InscriptionIdJson {
+pub(super) fn create_inscription_json(inscription_id: &InscriptionId) -> InscriptionIdJson {
   InscriptionIdJson {
-    inscription_id,
+    inscription_id: inscription_id.clone(),
     transaction_id: inscription_id.txid,
   }
 }
@@ -36,6 +36,7 @@ pub(super) fn get_inscription_ids(block_index: u64, index: &Arc<Index>) -> Serve
   };
 
   let inscriptions_ids: Vec<InscriptionIdJson> = get_inscription_ids_for_block(&block, index)?
+    [0..100]
     .into_iter()
     .map(|thing| create_inscription_json(thing))
     .collect();
@@ -53,6 +54,7 @@ pub(super) fn get_inscription_ids_by_transaction(
   };
 
   let inscriptions_ids: Vec<InscriptionIdJson> = get_inscription_ids_for_block(&block, index)?
+    [0..100]
     .into_iter()
     .map(|thing| create_inscription_json(thing))
     .collect();
