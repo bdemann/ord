@@ -54,7 +54,7 @@ impl Server {
   }
 
   pub(super) async fn test() -> ServerResult<String> {
-    Ok("Added pagination and count".to_string())
+    Ok("working with troubleshooting: first 100".to_string())
   }
 
   pub(super) async fn outputs_for_block(
