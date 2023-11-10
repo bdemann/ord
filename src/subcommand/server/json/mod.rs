@@ -54,7 +54,7 @@ impl Server {
   }
 
   pub(super) async fn test() -> ServerResult<String> {
-    Ok("working with troubleshooting: first 100".to_string())
+    Ok("working with troubleshooting: all in all".to_string())
   }
 
   pub(super) async fn outputs_for_block(

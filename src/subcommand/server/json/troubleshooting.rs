@@ -11,19 +11,19 @@ use super::{
 
 #[derive(Deserialize, Serialize, Clone)]
 pub(super) struct InscriptionIdJson {
-  pub inscription_id: InscriptionId,
+  pub inscription_id: u32,
   pub transaction_id: Txid,
 }
 
 #[derive(Deserialize, Serialize, Clone)]
 pub(super) struct TransactionsWithInscriptionId {
   pub transaction_id: Txid,
-  pub inscription_ids: Vec<InscriptionId>,
+  pub inscription_ids: Vec<u32>,
 }
 
 pub(super) fn create_inscription_json(inscription_id: &InscriptionId) -> InscriptionIdJson {
   InscriptionIdJson {
-    inscription_id: inscription_id.clone(),
+    inscription_id: inscription_id.index,
     transaction_id: inscription_id.txid,
   }
 }
@@ -36,9 +36,8 @@ pub(super) fn get_inscription_ids(block_index: u64, index: &Arc<Index>) -> Serve
   };
 
   let inscriptions_ids: Vec<InscriptionIdJson> = get_inscription_ids_for_block(&block, index)?
-    [0..100]
     .into_iter()
-    .map(|thing| create_inscription_json(thing))
+    .map(|thing| create_inscription_json(&thing))
     .collect();
   Ok(handle_json_result(serde_json::to_string(&inscriptions_ids)))
 }
@@ -54,12 +53,11 @@ pub(super) fn get_inscription_ids_by_transaction(
   };
 
   let inscriptions_ids: Vec<InscriptionIdJson> = get_inscription_ids_for_block(&block, index)?
-    [0..100]
     .into_iter()
-    .map(|thing| create_inscription_json(thing))
+    .map(|thing| create_inscription_json(&thing))
     .collect();
 
-  let mut map: HashMap<Txid, Vec<InscriptionId>> = HashMap::new();
+  let mut map: HashMap<Txid, Vec<u32>> = HashMap::new();
 
   for inscription_id in inscriptions_ids {
     map
