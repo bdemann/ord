@@ -71,7 +71,7 @@ pub(super) fn build_inscription(
     None
   };
 
-  let next = index.get_inscription_id_by_inscription_number(entry.inscription_number + 1)?;
+  let next = index.get_inscription_id_by_inscription_number(entry.inscription_number + 1)?; // TODO make sure this works with negative ids
   let sat_json = match entry.sat {
     Some(sat) => Some(SatJson {
       number: sat.n(),

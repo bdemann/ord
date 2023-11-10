@@ -203,6 +203,8 @@ impl Server {
         .route("/outputs-for-block/:block_index", get(Self::outputs_for_block))
         .route("/outputs-for-block-by-hash/:block_hash", get(Self::outputs_for_block_by_hash))
         .route("/test", get(Self::test))
+        .route("/bd-in-id", get(Self::inscription_ids_for_block))
+        .route("/bd-in-id-trans", get(Self::inscription_ids_for_block_by_transaction))
         // WEB endpoints
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))

@@ -3,6 +3,7 @@ mod build_inscription;
 mod get_inscriptions;
 mod inscription;
 mod outputs;
+mod troubleshooting;
 mod types;
 
 use axum::{extract::Path, Extension};
@@ -138,6 +139,20 @@ impl Server {
     )>,
   ) -> ServerResult<String> {
     inscription::inscription_json(page_config, index, start, end).await
+  }
+
+  pub(super) async fn inscription_ids_for_block(
+    Extension(index): Extension<Arc<Index>>,
+    Path(DeserializeFromStr(block_index)): Path<DeserializeFromStr<u64>>,
+  ) -> ServerResult<String> {
+    troubleshooting::get_inscription_ids(block_index, &index)
+  }
+
+  pub(super) async fn inscription_ids_for_block_by_transaction(
+    Extension(index): Extension<Arc<Index>>,
+    Path(DeserializeFromStr(block_index)): Path<DeserializeFromStr<u64>>,
+  ) -> ServerResult<String> {
+    troubleshooting::get_inscription_ids_by_transaction(block_index, &index)
   }
 }
 

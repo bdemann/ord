@@ -64,7 +64,9 @@ pub(super) fn get_inscriptions_for_transaction(
   index: &Arc<Index>,
   page_config: &Arc<PageConfig>,
 ) -> ServerResult<Vec<InscriptionJson>> {
+  // TODO here
   let inscription_ids = get_inscription_ids_for_transaction(transaction, index)?;
+  // TODO or here
   get_inscriptions_from_inscription_ids(&inscription_ids, index, page_config)
 }
 
@@ -85,7 +87,7 @@ fn get_inscription_ids_for_transaction(
     })
 }
 
-fn get_inscription_ids_for_block(
+pub(super) fn get_inscription_ids_for_block(
   block: &Block,
   index: &Arc<Index>,
 ) -> ServerResult<Vec<InscriptionId>> {
