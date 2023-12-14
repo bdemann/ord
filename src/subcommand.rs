@@ -6,6 +6,7 @@ pub mod find;
 mod index;
 pub mod info;
 pub mod list;
+mod mempool_index;
 pub mod parse;
 mod preview;
 mod server;

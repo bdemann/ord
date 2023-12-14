@@ -1,3 +1,5 @@
+use super::mempool_index::MempoolIndex;
+
 use {
   self::{
     accept_json::AcceptJson,
@@ -184,6 +186,18 @@ impl Server {
         index_sats: index.has_sat_index(),
       });
 
+      let mempool_index = Arc::new(Mutex::new(MempoolIndex::new()));
+
+      let mempool_index_clone = Arc::clone(&mempool_index);
+      std::thread::spawn(move || {
+          loop {
+              let mut index = mempool_index_clone.lock().unwrap();
+              index.update();
+              thread::sleep(Duration::from_millis(5000));
+              // Release the lock by dropping `index` at the end of this block
+          }
+      });
+
       let router = Router::new()
         .route("/", get(Self::home))
         // JSON endpoints
@@ -203,6 +217,11 @@ impl Server {
         .route("/outputs-for-block/:block_index", get(Self::outputs_for_block))
         .route("/outputs-for-block-by-hash/:block_hash", get(Self::outputs_for_block_by_hash))
         .route("/test", get(Self::test))
+        // MEMPOOL endpoints
+        .route("/inscriptions_in_mempool", get(Self::inscriptions_in_mempool))
+        .route("/inscription_count_in_mempool", get(Self::inscription_count_in_mempool))
+        .route("/paginated_inscriptions_in_mempool", get(Self::paginated_inscriptions_in_mempool))
+        .route("/mempool_test", get(Self::mempool_test))
         // WEB endpoints
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))
@@ -258,6 +277,7 @@ impl Server {
         .route("/tx/:txid", get(Self::transaction))
         .layer(Extension(index))
         .layer(Extension(page_config))
+        .layer(Extension(mempool_index))
         .layer(Extension(Arc::new(config)))
         .layer(SetResponseHeaderLayer::if_not_present(
           header::CONTENT_SECURITY_POLICY,
