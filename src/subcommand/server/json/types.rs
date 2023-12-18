@@ -9,6 +9,14 @@ pub(super) type AddressJson = String;
 pub(super) type ScriptJson = String;
 
 #[derive(Deserialize, Serialize, Clone)]
+pub(super) struct LightInscriptionJson {
+  pub inscription_id: InscriptionId,
+  pub content_len: Option<usize>,
+  pub transaction: String,
+  pub content_type: Option<String>,
+}
+
+#[derive(Deserialize, Serialize, Clone)]
 pub(super) struct InscriptionJson {
   pub inscription_id: InscriptionId,
   pub address: Option<AddressJson>,
