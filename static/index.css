@@ -4,8 +4,8 @@
   --dark-fg: #98a3ad;
   --epic: darkorchid;
   --legendary: gold;
-  --light-bg: #000000;
-  --light-fg: #ffffff;
+  --light-bg: #292c2f;
+  --light-fg: #a1adb8;
   --link: #4169e1;
   --mythic: #f2a900;
   --rare: cornflowerblue;
@@ -34,6 +34,10 @@ h1 {
   width: 100%;
 }
 
+h1 a {
+  color: var(--light-fg);
+}
+
 iframe {
   aspect-ratio: 1 / 1;
   border: none;
@@ -46,6 +50,10 @@ a {
 
 a:hover {
   text-decoration: underline;
+}
+
+a:visited {
+  color: var(--link);
 }
 
 dt {
@@ -66,15 +74,6 @@ nav > :first-child {
   font-weight: bold;
 }
 
-nav a:hover {
-  color: var(--link);
-  text-decoration: none;
-}
-
-nav a {
-  color: var(--light-fg);
-}
-
 form {
   display: flex;
   flex-grow: 1;
@@ -92,17 +91,6 @@ input[type=text] {
   min-width: 0;
 }
 
-input[type=submit] {
-  background: none;
-  border: none;
-  color: var(--light-fg);
-  cursor: pointer;
-  font-weight: bold;
-  font: inherit;
-  outline: inherit;
-  padding: 0;
-}
-
 dl {
   overflow-wrap: break-word;
 }
@@ -117,11 +105,27 @@ ol, ul {
   }
 }
 
-.blocks {
+.block-list {
   font-family: monospace, monospace;
   list-style-position: inside;
-  padding-inline-start: 1rem;
   white-space: nowrap;
+}
+
+.block {
+  background-color: var(--light-bg);
+  border-radius: 0.5%;
+  margin: 3%;
+  padding: 0.5%;
+  text-align: center;
+}
+
+.block a {
+  color: var(--light-fg);
+  margin-top: 1%;
+}
+
+.block h2 {
+  margin: 1%;
 }
 
 .center {

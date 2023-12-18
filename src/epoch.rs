@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, PartialOrd)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Display, PartialOrd, serde::Deserialize, serde::Serialize)]
 pub(crate) struct Epoch(pub(crate) u64);
 
 impl Epoch {
