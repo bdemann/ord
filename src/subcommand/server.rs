@@ -186,16 +186,21 @@ impl Server {
         index_sats: index.has_sat_index(),
       });
 
-      let mempool_index = Arc::new(Mutex::new(MempoolIndex::new()));
+      let client = options.bitcoin_rpc_client()?;
+      let mempool_index = Arc::new(Mutex::new(MempoolIndex::new(client)));
 
       let mempool_index_clone = Arc::clone(&mempool_index);
-      std::thread::spawn(move || {
-          loop {
-              let mut index = mempool_index_clone.lock().unwrap();
-              index.update();
-              thread::sleep(Duration::from_millis(5000));
-              // Release the lock by dropping `index` at the end of this block
+      std::thread::spawn(move || loop {
+        if SHUTTING_DOWN.load(atomic::Ordering::Relaxed) {
+          break;
+        }
+        {
+          let mut mempool_index_clone = mempool_index_clone.lock().unwrap();
+          if let Err(error) = mempool_index_clone.update() {
+            log::warn!("Updating mempool index: {error}");
           }
+        }
+        thread::sleep(Duration::from_millis(5000));
       });
 
       let router = Router::new()
@@ -219,9 +224,9 @@ impl Server {
         .route("/test", get(Self::test))
         // MEMPOOL endpoints
         .route("/inscriptions_in_mempool", get(Self::inscriptions_in_mempool))
-        .route("/inscription_count_in_mempool", get(Self::inscription_count_in_mempool))
-        .route("/paginated_inscriptions_in_mempool", get(Self::paginated_inscriptions_in_mempool))
-        .route("/mempool_test", get(Self::mempool_test))
+        .route("/content_in_mempool/:inscription_id", get(Self::content_in_mempool))
+//        .route("/inscription_count_in_mempool", get(Self::inscription_count_in_mempool))
+//        .route("/paginated_inscriptions_in_mempool", get(Self::paginated_inscriptions_in_mempool))
         // WEB endpoints
         .route("/block/:query", get(Self::block))
         .route("/blockcount", get(Self::block_count))
@@ -1019,6 +1024,28 @@ impl Server {
 
     Ok(
       Self::content_response(inscription)
+        .ok_or_not_found(|| format!("inscription {inscription_id} content"))?
+        .into_response(),
+    )
+  }
+
+  async fn content_in_mempool(
+    Extension(mempool_index): Extension<Arc<Mutex<MempoolIndex>>>,
+    Extension(config): Extension<Arc<Config>>,
+    Path(inscription_id): Path<InscriptionId>,
+  ) -> ServerResult<Response> {
+    if config.is_hidden(inscription_id) {
+      return Ok(PreviewUnknownHtml.into_response());
+    }
+
+    let mempool_index_lock = mempool_index.lock().unwrap();
+    let inscription = mempool_index_lock
+      .inscriptions
+      .get(&inscription_id)
+      .ok_or_not_found(|| format!("inscription {inscription_id}"))?;
+
+    Ok(
+      Self::content_response(inscription.clone())
         .ok_or_not_found(|| format!("inscription {inscription_id} content"))?
         .into_response(),
     )
