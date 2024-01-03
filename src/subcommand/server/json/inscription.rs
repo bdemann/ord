@@ -34,15 +34,16 @@ pub(super) async fn inscription_json_by_index(
   )
 }
 
-pub(super) async fn latest_inscription_json(
-  server_config: Arc<ServerConfig>,
-  index: Arc<Index>,
-) -> ServerResult<String> {
-  let latest_inscription = index.get_latest_inscriptions_with_prev_and_next(1, None)?.0[0];
-  let inscription =
-    build_inscription::build_inscription(&latest_inscription, &index, &server_config)?;
-  Ok(handle_json_result(serde_json::to_string(&inscription)))
-}
+// TODO get_latest_inscriptions_with_prev_and_next doesn't exist anymore, but it seems like we don't use the endpoint associated with this function so I'm disabling it for right now
+// pub(super) async fn latest_inscription_json(
+//   server_config: Arc<ServerConfig>,
+//   index: Arc<Index>,
+// ) -> ServerResult<String> {
+//   let latest_inscription = index.get_latest_inscriptions_with_prev_and_next(1, None)?.0[0];
+//   let inscription =
+//     build_inscription::build_inscription(&latest_inscription, &index, &server_config)?;
+//   Ok(handle_json_result(serde_json::to_string(&inscription)))
+// }
 
 pub(super) async fn inscription_json(
   server_config: Arc<ServerConfig>,

@@ -235,7 +235,7 @@ impl Server {
         .route("/inscription-count-for-block-by-hash/:block_hash", get(Self::inscription_count_for_block_by_hash))
         .route("/latest-block-id", get(Self::latest_block_id))
         .route("/latest-block-json", get(Self::latest_block))
-        .route("/latest-inscription-json", get(Self::latest_inscription_json))
+        // .route("/latest-inscription-json", get(Self::latest_inscription_json)) // TODO the underlying function on the indexer is gone, so we are removing this endpoint for right now
         .route("/outputs-for-block/:block_index", get(Self::outputs_for_block))
         .route("/outputs-for-block-by-hash/:block_hash", get(Self::outputs_for_block_by_hash))
         .route("/test", get(Self::test))

@@ -127,12 +127,13 @@ impl Server {
     inscription::inscription_count_for_block_by_hash(index, block_hash).await
   }
 
-  pub(super) async fn latest_inscription_json(
-    Extension(server_config): Extension<Arc<ServerConfig>>,
-    Extension(index): Extension<Arc<Index>>,
-  ) -> ServerResult<String> {
-    inscription::latest_inscription_json(server_config, index).await
-  }
+  // TODO see the TODO on the associated functions
+  // pub(super) async fn latest_inscription_json(
+  //   Extension(server_config): Extension<Arc<ServerConfig>>,
+  //   Extension(index): Extension<Arc<Index>>,
+  // ) -> ServerResult<String> {
+  //   inscription::latest_inscription_json(server_config, index).await
+  // }
 
   pub(super) async fn inscription_json(
     Extension(server_config): Extension<Arc<ServerConfig>>,

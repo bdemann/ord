@@ -1336,7 +1336,6 @@ impl Index {
     .transpose()
   }
 
-  #[cfg(test)]
   pub(crate) fn get_inscription_id_by_inscription_number(
     &self,
     inscription_number: i32,
