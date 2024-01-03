@@ -2,13 +2,15 @@ use bitcoin::{Block, OutPoint, Transaction};
 use std::sync::Arc;
 
 use super::{build_inscription, types::InscriptionJson};
-use crate::{subcommand::server::error::ServerResult, templates::PageConfig, Index, InscriptionId};
+use crate::{
+  subcommand::server::error::ServerResult, templates::ServerConfig, Index, InscriptionId,
+};
 
 // Method 1: get all of the inscriptions in one go
 pub(super) fn get_inscriptions_from_block(
   block: &Block,
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
 ) -> ServerResult<Vec<InscriptionJson>> {
   let transactions = &block.txdata;
 
@@ -18,7 +20,7 @@ pub(super) fn get_inscriptions_from_block(
       acc.extend(get_inscriptions_for_transaction(
         transaction,
         index,
-        page_config,
+        server_config,
       )?);
       Ok(acc)
     })
@@ -28,7 +30,7 @@ pub(super) fn get_inscriptions_from_block(
 pub(super) fn get_paginated_inscriptions_from_block(
   block: &Block,
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
   start: usize,
   count: usize,
 ) -> ServerResult<Vec<InscriptionJson>> {
@@ -43,7 +45,7 @@ pub(super) fn get_paginated_inscriptions_from_block(
     end_index
   };
   let page_of_inscriptions = &inscription_ids[start..end_index];
-  get_inscriptions_from_inscription_ids(page_of_inscriptions, index, page_config)
+  get_inscriptions_from_inscription_ids(page_of_inscriptions, index, server_config)
 }
 
 pub(super) fn get_inscription_count_on_block(
@@ -62,10 +64,10 @@ pub(super) fn get_transactions_from_block(block: &Block) -> &Vec<Transaction> {
 pub(super) fn get_inscriptions_for_transaction(
   transaction: &Transaction,
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
 ) -> ServerResult<Vec<InscriptionJson>> {
   let inscription_ids = get_inscription_ids_for_transaction(transaction, index)?;
-  get_inscriptions_from_inscription_ids(&inscription_ids, index, page_config)
+  get_inscriptions_from_inscription_ids(&inscription_ids, index, server_config)
 }
 
 // Helper functions
@@ -103,12 +105,12 @@ fn get_inscription_ids_for_block(
 fn get_inscriptions_from_inscription_ids(
   inscription_ids: &[InscriptionId],
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
 ) -> ServerResult<Vec<InscriptionJson>> {
   inscription_ids
     .iter()
     .map(|inscription_id| {
-      build_inscription::build_inscription(inscription_id, &index, &page_config)
+      build_inscription::build_inscription(inscription_id, &index, &server_config)
     })
     .collect()
 }
@@ -116,7 +118,7 @@ fn get_inscriptions_from_inscription_ids(
 // fn get_inscriptions_from_block(
 //   block: &Block,
 //   index: &Arc<Index>,
-//   page_config: &Arc<PageConfig>,
+//   server_config: &Arc<ServerConfig>,
 // ) -> ServerResult<Vec<InscriptionJson>> {
 //   let transactions = &block.txdata;
 
@@ -135,7 +137,7 @@ fn get_inscriptions_from_inscription_ids(
 //             .iter()
 //             .fold(Ok(vec![]), |acc, inscription_id| {
 //               let mut acc = acc?;
-//               acc.push(build_inscription(inscription_id, &index, &page_config)?);
+//               acc.push(build_inscription(inscription_id, &index, &server_config)?);
 //               Ok(acc)
 //             });
 //         acc.extend(inscriptions?);
