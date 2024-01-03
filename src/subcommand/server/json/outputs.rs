@@ -2,12 +2,12 @@ use std::sync::Arc;
 
 use bitcoin::{Block, BlockHash, OutPoint};
 
-use crate::{index::Index, subcommand::server::error::ServerResult, templates::PageConfig};
+use crate::{index::Index, subcommand::server::error::ServerResult, templates::ServerConfig};
 
 use super::{handle_json_result, types::OutputJson};
 
 pub(super) async fn outputs_for_block_by_hash(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
   block_hash: BlockHash,
 ) -> ServerResult<String> {
@@ -17,15 +17,15 @@ pub(super) async fn outputs_for_block_by_hash(
     None => return Ok("[]".to_string()),
   };
 
-  let outputs = get_outputs_from_block(&block, &index, &page_config);
+  let outputs = get_outputs_from_block(&block, &index, &server_config);
 
   Ok(handle_json_result(serde_json::to_string(&outputs?)))
 }
 
 pub(super) async fn outputs_for_block(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
-  block_index: u64,
+  block_index: u32,
 ) -> ServerResult<String> {
   let block_option = index.get_block_by_height(block_index)?;
   let block = match block_option {
@@ -33,7 +33,7 @@ pub(super) async fn outputs_for_block(
     None => return Ok("[]".to_string()),
   };
 
-  let outputs = get_outputs_from_block(&block, &index, &page_config);
+  let outputs = get_outputs_from_block(&block, &index, &server_config);
 
   Ok(handle_json_result(serde_json::to_string(&outputs?)))
 }
@@ -41,7 +41,7 @@ pub(super) async fn outputs_for_block(
 fn get_outputs_from_block(
   block: &Block,
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
 ) -> ServerResult<Vec<OutputJson>> {
   let transactions = &block.txdata;
 
@@ -61,7 +61,7 @@ fn get_outputs_from_block(
               inscriptions,
               value: output.value,
               script_pubkey: output.script_pubkey.to_string(),
-              address: page_config
+              address: server_config
                 .chain
                 .address_from_script(&output.script_pubkey)
                 .ok()

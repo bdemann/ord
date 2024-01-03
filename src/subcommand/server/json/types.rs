@@ -2,7 +2,8 @@ use bitcoin::{BlockHash, Transaction, TxOut, Txid};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-  decimal::Decimal, degree::Degree, height::Height, Chain, Epoch, InscriptionId, Rarity, SatPoint,
+  decimal_sat::DecimalSat, degree::Degree, height::Height, Chain, Epoch, InscriptionId, Rarity,
+  SatPoint,
 };
 
 pub(super) type AddressJson = String;
@@ -23,7 +24,7 @@ pub(super) struct InscriptionJson {
   pub output_value: Option<u64>,
   pub sat: Option<SatJson>,
   pub content_len: Option<usize>,
-  pub genesis_height: u64,
+  pub genesis_height: u32,
   pub genesis_fee: u64,
   pub timestamp: u32,
   pub transaction: String,
@@ -33,7 +34,7 @@ pub(super) struct InscriptionJson {
   pub chain: Chain,
   pub content_type: Option<String>,
   pub next: Option<InscriptionId>,
-  pub number: i64,
+  pub number: i32,
   pub previous: Option<InscriptionId>,
   pub satpoint: SatPoint,
   pub original_owner: Option<AddressJson>,
@@ -42,13 +43,13 @@ pub(super) struct InscriptionJson {
 #[derive(Deserialize, Serialize, Clone)]
 pub(super) struct SatJson {
   pub number: u64,
-  pub decimal: Decimal,
+  pub decimal: DecimalSat,
   pub degree: Degree,
   pub percentile: String,
   pub name: String,
-  pub cycle: u64,
+  pub cycle: u32,
   pub epoch: Epoch,
-  pub period: u64,
+  pub period: u32,
   pub block: Height,
   pub offset: u64,
   pub rarity: Rarity,

@@ -4,29 +4,29 @@ use std::sync::Arc;
 use super::{build_inscription, get_inscriptions, handle_json_result, types::InscriptionJson};
 use crate::{
   subcommand::server::error::{ServerError, ServerResult},
-  templates::PageConfig,
+  templates::ServerConfig,
   Index, InscriptionId,
 };
 
 pub(super) async fn inscription_json_by_id(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
   inscription_id: InscriptionId,
 ) -> ServerResult<String> {
-  let inscription = build_inscription::build_inscription(&inscription_id, &index, &page_config)?;
+  let inscription = build_inscription::build_inscription(&inscription_id, &index, &server_config)?;
   Ok(handle_json_result(serde_json::to_string(&inscription)))
 }
 
 pub(super) async fn inscription_json_by_index(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
-  inscription_index: i64,
+  inscription_index: i32,
 ) -> ServerResult<String> {
   Ok(
     match index.get_inscription_id_by_inscription_number(inscription_index)? {
       Some(inscription_id) => {
         let inscription =
-          build_inscription::build_inscription(&inscription_id, &index, &page_config)?;
+          build_inscription::build_inscription(&inscription_id, &index, &server_config)?;
         handle_json_result(serde_json::to_string(&inscription))
       }
       None => "{}".to_string(),
@@ -35,20 +35,20 @@ pub(super) async fn inscription_json_by_index(
 }
 
 pub(super) async fn latest_inscription_json(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
 ) -> ServerResult<String> {
   let latest_inscription = index.get_latest_inscriptions_with_prev_and_next(1, None)?.0[0];
   let inscription =
-    build_inscription::build_inscription(&latest_inscription, &index, &page_config)?;
+    build_inscription::build_inscription(&latest_inscription, &index, &server_config)?;
   Ok(handle_json_result(serde_json::to_string(&inscription)))
 }
 
 pub(super) async fn inscription_json(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
-  start: i64,
-  end: i64,
+  start: i32,
+  end: i32,
 ) -> ServerResult<String> {
   if start > end {
     return Err(ServerError::BadRequest(
@@ -69,7 +69,7 @@ pub(super) async fn inscription_json(
       .fold(Ok(vec![]), |acc: ServerResult<_>, inscription_id| {
         let acc = acc?;
         let inscription =
-          build_inscription::build_inscription(&inscription_id, &index, &page_config)?;
+          build_inscription::build_inscription(&inscription_id, &index, &server_config)?;
         Ok(vec![acc, vec![inscription]].concat())
       })?;
 
@@ -77,9 +77,9 @@ pub(super) async fn inscription_json(
 }
 
 pub(super) async fn inscriptions_for_block(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
-  block_index: u64,
+  block_index: u32,
 ) -> ServerResult<String> {
   let block_option = index.get_block_by_height(block_index)?;
   let block = match block_option {
@@ -87,13 +87,13 @@ pub(super) async fn inscriptions_for_block(
     None => return Ok("[]".to_string()),
   };
 
-  let inscriptions = get_inscriptions::get_inscriptions_from_block(&block, &index, &page_config);
+  let inscriptions = get_inscriptions::get_inscriptions_from_block(&block, &index, &server_config);
 
   Ok(handle_json_result(serde_json::to_string(&inscriptions?)))
 }
 
 pub(super) async fn inscriptions_for_block_by_hash(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
   block_hash: BlockHash,
 ) -> ServerResult<String> {
@@ -103,15 +103,15 @@ pub(super) async fn inscriptions_for_block_by_hash(
     None => return Ok("[]".to_string()),
   };
 
-  let inscriptions = get_inscriptions::get_inscriptions_from_block(&block, &index, &page_config);
+  let inscriptions = get_inscriptions::get_inscriptions_from_block(&block, &index, &server_config);
 
   Ok(handle_json_result(serde_json::to_string(&inscriptions?)))
 }
 
 pub(super) async fn paginated_inscriptions_for_block(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
-  block_index: u64,
+  block_index: u32,
   start: usize,
   count: usize,
 ) -> ServerResult<String> {
@@ -124,7 +124,7 @@ pub(super) async fn paginated_inscriptions_for_block(
   let inscriptions = get_inscriptions::get_paginated_inscriptions_from_block(
     &block,
     &index,
-    &page_config,
+    &server_config,
     start,
     count,
   );
@@ -133,7 +133,7 @@ pub(super) async fn paginated_inscriptions_for_block(
 }
 
 pub(super) async fn paginated_inscriptions_for_block_by_hash(
-  page_config: Arc<PageConfig>,
+  server_config: Arc<ServerConfig>,
   index: Arc<Index>,
   block_hash: BlockHash,
   start: usize,
@@ -148,7 +148,7 @@ pub(super) async fn paginated_inscriptions_for_block_by_hash(
   let inscriptions = get_inscriptions::get_paginated_inscriptions_from_block(
     &block,
     &index,
-    &page_config,
+    &server_config,
     start,
     count,
   );
@@ -158,7 +158,7 @@ pub(super) async fn paginated_inscriptions_for_block_by_hash(
 
 pub(super) async fn inscription_count_for_block(
   index: Arc<Index>,
-  block_index: u64,
+  block_index: u32,
 ) -> ServerResult<String> {
   let block_option = index.get_block_by_height(block_index)?;
   let block = match block_option {

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::{
   subcommand::server::error::{OptionExt, ServerResult},
-  templates::PageConfig,
+  templates::ServerConfig,
   Index, InscriptionId,
 };
 
@@ -11,7 +11,7 @@ use super::types::{InscriptionJson, SatJson};
 pub(super) fn build_inscription(
   inscription_id: &InscriptionId,
   index: &Arc<Index>,
-  page_config: &Arc<PageConfig>,
+  server_config: &Arc<ServerConfig>,
 ) -> ServerResult<InscriptionJson> {
   let inscription_id = inscription_id.clone();
 
@@ -48,7 +48,7 @@ pub(super) fn build_inscription(
   };
 
   let address = match &output {
-    Some(output) => page_config
+    Some(output) => server_config
       .chain
       .address_from_script(&output.script_pubkey)
       .ok(),
@@ -99,7 +99,7 @@ pub(super) fn build_inscription(
     None => None,
   };
   let original_owner = match genesis_output {
-    Some(genesis_output) => page_config
+    Some(genesis_output) => server_config
       .chain
       .address_from_script(&genesis_output.script_pubkey)
       .ok(),
@@ -108,7 +108,7 @@ pub(super) fn build_inscription(
   .map(|address| address.to_string());
 
   Ok(InscriptionJson {
-    chain: page_config.chain,
+    chain: server_config.chain,
     genesis_fee: entry.fee,
     genesis_height: entry.height,
     inscription_id: inscription_id.clone(),

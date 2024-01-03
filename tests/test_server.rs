@@ -97,14 +97,14 @@ impl TestServer {
       .unwrap()
   }
 
-  fn sync_server(&self) {
+  pub(crate) fn sync_server(&self) {
     let client = Client::new(&self.rpc_url, Auth::None).unwrap();
     let chain_block_count = client.get_block_count().unwrap() + 1;
 
     for i in 0.. {
       let response = reqwest::blocking::get(self.url().join("/blockcount").unwrap()).unwrap();
       assert_eq!(response.status(), StatusCode::OK);
-      if response.text().unwrap().parse::<u64>().unwrap() == chain_block_count {
+      if response.text().unwrap().parse::<u64>().unwrap() >= chain_block_count {
         break;
       } else if i == 20 {
         panic!("index failed to synchronize with chain");
