@@ -1626,6 +1626,24 @@ impl Index {
     }
   }
 
+  /*
+  IMPORTANT: This function was written by ordinals and then deleted by ordinals. We use it so I'm keeing it until we can find a better solution.
+  // TONIQ TODO: Remove this function once we have a better solution.
+   */
+  pub(crate) fn get_inscriptions_on_output(
+    &self,
+    outpoint: OutPoint,
+  ) -> Result<Vec<InscriptionId>> {
+    Ok(
+      self
+        .get_inscriptions_on_output_with_satpoints(outpoint)?
+        .unwrap_or_default()
+        .iter()
+        .map(|(_satpoint, inscription_id)| *inscription_id)
+        .collect(),
+    )
+  }
+
   pub fn find(&self, sat: Sat) -> Result<Option<SatPoint>> {
     let sat = sat.0;
     let rtx = self.begin_read()?;

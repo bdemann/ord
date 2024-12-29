@@ -80,7 +80,7 @@ fn get_inscription_ids_for_transaction(
     .iter()
     .enumerate()
     .try_fold(Vec::new(), |mut acc, (vout, _)| {
-      let outpoint = OutPoint::new(transaction.txid(), vout as u32);
+      let outpoint = OutPoint::new(transaction.compute_txid(), vout as u32);
       let inscriptions_ids = index.get_inscriptions_on_output(outpoint)?;
       acc.extend(inscriptions_ids);
       Ok(acc)

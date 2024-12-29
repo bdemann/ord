@@ -54,7 +54,7 @@ fn get_outputs_from_block(
         .enumerate()
         .fold(Ok(vec![]), |acc, (vout, output)| {
           let mut acc = acc?;
-          let outpoint = OutPoint::new(transaction.txid(), vout as u32);
+          let outpoint = OutPoint::new(transaction.compute_txid(), vout as u32);
           let inscriptions = index.get_inscriptions_on_output(outpoint)?;
           if inscriptions.len() > 0 {
             acc.push(OutputJson {
@@ -66,7 +66,7 @@ fn get_outputs_from_block(
                 .address_from_script(&output.script_pubkey)
                 .ok()
                 .map(|address| address.to_string()),
-              transaction: transaction.txid(),
+              transaction: transaction.compute_txid(),
             });
           }
           Ok(acc)
